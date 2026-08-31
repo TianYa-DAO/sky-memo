@@ -106,3 +106,8 @@ function order_by_token(PDO $pdo, string $token): ?array {
     $row = $st->fetch();
     return $row === false ? null : $row;
 }
+
+// 取订单的客户进度 token（无则生成）
+function order_token(PDO $pdo, int $orderId): string {
+    return ensure_client_token($pdo, $orderId);
+}

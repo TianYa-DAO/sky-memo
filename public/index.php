@@ -46,9 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contact = trim($_POST['contact'] ?? '');
     if ($info === '') { $msg = '请填写需求说明'; }
     else {
-        // 客户提交：创建"待接"订单，默认工作日、7天周期，三项为0（后台接单时补）
-        $oid = order_create($pdo, 1, $type, 0, 0, 0, '1,2,3,4,5', date('Y-m-d'), date('Y-m-d', strtotime('+7 day')), 0, '待接', '客户提交: ' . $info . ($contact !== '' ? ' 联系方式:' . $contact : ''));
-        $msg = '提交成功！订单号：' . order_get($pdo, $oid)['order_no'] . '，请保存订单号用于查询进度';
+        // 客户提交：创建"待接"订单；老板取第一个可用（无老板则用 0 占位，后台接单时再分配）
+        $bossesList = boss_list($pdo);
+        $newBossId = !empty($bossesList) ? (int)$bossesList[0]['id'] : 0;
+        $oid = order_create($pdo, $newBossId, $type, 0, 0, 0, '1,2,3,4,5', date('Y-m-d'), date('Y-m-d', strtotime('+7 day')), 0, '待接', '客户提交: ' . $info . ($contact !== '' ? ' 联系方式:' . $contact : ''));
+        $order = order_get($pdo, $oid);
+        $tok = order_token($pdo, $oid);
+        $msg = '提交成功！订单号：' . $order['order_no'] . '<br>进度链接（请保存）：<a href="index.php?token=' . h($tok) . '">index.php?token=' . h($tok) . '</a>，可随时查看进度';
     }
 }
 $bosses = boss_list($pdo);
@@ -56,7 +60,7 @@ echo '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="
 echo '<title>光遇接单备忘录</title><link rel="stylesheet" href="assets/style.css"></head><body>';
 echo '<div class="hero"><h1>✨ 光遇接单</h1><p>代跑 · 蜡烛 · 代币 · 每日任务</p></div>';
 echo '<div class="container"><div class="card">';
-if ($msg) echo '<p class="' . (str_starts_with($msg, '提交成功') ? 'ok' : 'err') . '">' . h($msg) . '</p>';
+if ($msg) echo '<p class="' . (str_starts_with($msg, '提交成功') ? 'ok' : 'err') . '">' . $msg . '</p>';
 echo '<h2>提交代跑需求</h2>';
 echo '<form method="post" class="form-grid">';
 echo '<input type="hidden" name="csrf" value="' . csrf_token() . '">';

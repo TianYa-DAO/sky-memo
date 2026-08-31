@@ -28,10 +28,13 @@ function enc_secret(string $plain): string {
     $iv = random_bytes(16);
     return base64_encode($iv . openssl_encrypt($plain, 'aes-256-cbc', AES_KEY, OPENSSL_RAW_DATA, $iv));
 }
-function dec_secret(string $cipher): string {
-    $raw = base64_decode($cipher);
+function dec_secret(?string $cipher): string {
+    if ($cipher === null || $cipher === '') return '';
+    $raw = base64_decode($cipher, true);
+    if ($raw === false || strlen($raw) < 17) return '';
     $iv = substr($raw, 0, 16);
-    return openssl_decrypt(substr($raw, 16), 'aes-256-cbc', AES_KEY, OPENSSL_RAW_DATA, $iv);
+    $dec = openssl_decrypt(substr($raw, 16), 'aes-256-cbc', AES_KEY, OPENSSL_RAW_DATA, $iv);
+    return $dec === false ? '' : $dec;
 }
 
 // HTML 转义辅助

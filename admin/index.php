@@ -8,7 +8,7 @@ require __DIR__ . '/../app/bosses.php';
 require __DIR__ . '/../app/orders.php';
 require __DIR__ . '/../app/records.php';
 
-session_start();
+ensure_session();
 $pdo = get_pdo();
 $action = $_GET['action'] ?? 'todos';
 $loginError = '';
@@ -45,7 +45,7 @@ function page_header(string $title, bool $showNav = true): void {
     if ($showNav) echo $nav;
 }
 function page_footer(): void {
-    echo '</body></html>';
+    echo '<script src="../public/assets/app.js"></script></body></html>';
 }
 function weekdays_label(string $json): string {
     $map = ['1' => '周一', '2' => '周二', '3' => '周三', '4' => '周四', '5' => '周五', '6' => '周六', '7' => '周日'];
@@ -108,16 +108,20 @@ if ($action === 'todos') {
 if ($action === 'orders') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
+        // weekdays 是 <select multiple>，PHP 收到数组；转成 CSV 字符串
+        $wdRaw = $_POST['weekdays'] ?? '';
+        $wdStr = is_array($wdRaw) ? implode(',', array_map('intval', $wdRaw)) : (string)$wdRaw;
+        if ($wdStr === '') $wdStr = '1,2,3,4,5'; // 没选周几则默认工作日
         if (($_POST['do'] ?? '') === 'create') {
             order_create($pdo, (int)$_POST['boss_id'], $_POST['type'],
                 (int)$_POST['daily_figure'], (int)$_POST['daily_task'], (int)$_POST['daily_currency'],
-                $_POST['weekdays'], $_POST['start_date'], $_POST['end_date'],
+                $wdStr, $_POST['start_date'], $_POST['end_date'],
                 (float)$_POST['price'], $_POST['status'] ?? '进行中', $_POST['notes'] ?? '');
         } elseif (($_POST['do'] ?? '') === 'edit' && isset($_POST['id'])) {
             order_update($pdo, (int)$_POST['id'], [
                 'boss_id' => (int)$_POST['boss_id'], 'type' => $_POST['type'],
                 'daily_figure' => (int)$_POST['daily_figure'], 'daily_task' => (int)$_POST['daily_task'], 'daily_currency' => (int)$_POST['daily_currency'],
-                'weekdays' => $_POST['weekdays'], 'start_date' => $_POST['start_date'], 'end_date' => $_POST['end_date'],
+                'weekdays' => $wdStr, 'start_date' => $_POST['start_date'], 'end_date' => $_POST['end_date'],
                 'price' => (float)$_POST['price'], 'payment_status' => $_POST['payment_status'] ?? '未付',
                 'status' => $_POST['status'] ?? '进行中', 'notes' => $_POST['notes'] ?? '',
             ]);
@@ -156,7 +160,7 @@ if ($action === 'orders') {
     echo '<label>每日图数 <input type="number" name="daily_figure" value="' . (int)$f['daily_figure'] . '" min="0"></label>';
     echo '<label>每日任务数 <input type="number" name="daily_task" value="' . (int)$f['daily_task'] . '" min="0"></label>';
     echo '<label>每日代币数 <input type="number" name="daily_currency" value="' . (int)$f['daily_currency'] . '" min="0"></label>';
-    echo '<label>每周哪几天 <select name="weekdays" multiple size="5">';
+    echo '<label>每周哪几天 <select name="weekdays[]" multiple size="5">';
     $map = [1 => '周一', 2 => '周二', 3 => '周三', 4 => '周四', 5 => '周五', 6 => '周六', 7 => '周日'];
     foreach ($map as $k => $v) echo '<option value="' . $k . '"' . (in_array($k, $wd) ? ' selected' : '') . '>' . $v . '</option>';
     echo '</select><small>按住 Ctrl 可多选</small></label>';
