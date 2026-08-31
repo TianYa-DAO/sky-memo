@@ -24,6 +24,7 @@ if (isset($_GET['token']) && $_GET['token'] !== '') {
     echo '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
     echo '<title>订单进度 - 光遇备忘录</title><link rel="stylesheet" href="assets/style.css"></head><body>';
     echo '<div class="container"><div class="card view-card">';
+    echo '<div class="view-candle">' . candle_svg($order['status'] === '已完成', 56) . '</div>';
     echo '<h1>' . h($statusText) . '</h1>';
     echo '<p class="view-no">订单号：' . h($order['order_no']) . '</p>';
     echo '<div class="view-row"><span>类型</span><b>' . h($order['type']) . '</b></div>';
@@ -58,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $bosses = boss_list($pdo);
 echo '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
 echo '<title>光遇接单备忘录</title><link rel="stylesheet" href="assets/style.css"></head><body>';
-echo '<div class="hero"><h1>✨ 光遇接单</h1><p>代跑 · 蜡烛 · 代币 · 每日任务</p></div>';
+echo '<div class="hero">' . candle_svg(true, 56) . '<h1>✨ 光遇接单</h1><p>代跑 · 蜡烛 · 代币 · 每日任务</p></div>';
 echo '<div class="container"><div class="card">';
 if ($msg) echo '<p class="' . (str_starts_with($msg, '提交成功') ? 'ok' : 'err') . '">' . $msg . '</p>';
 echo '<h2>提交代跑需求</h2>';

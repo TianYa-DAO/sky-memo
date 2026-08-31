@@ -41,3 +41,22 @@ function dec_secret(?string $cipher): string {
 function h($s): string {
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
+
+// 签名元素：蜡烛 SVG（$lit=true 点亮金色，否则灰色）
+function candle_svg(bool $lit = false, int $size = 44): string {
+    $flame = $lit
+        ? '<g class="flame"><path d="M22 10c0-3-2.5-5-2.5-5S17 7 17 10a5 5 0 0 0 10 0c0-2-1-3-1-3s-1 1-1 3" fill="#f7b84b"/></g>'
+        : '<g class="flame" fill="none" stroke="#8fa0bd" stroke-width="1.5" stroke-linecap="round"><path d="M22 11c0-2.5-2-4.2-2-4.2S18 8.5 18 11a4 4 0 0 0 8 0c0-1.6-.8-2.4-.8-2.4s-.8.8-.8 2.4"/></g>';
+    $body_opacity = $lit ? '1' : '.45';
+    return '<svg class="candle' . ($lit ? ' glow' : '') . '" width="' . $size . '" height="' . $size . '" viewBox="0 0 44 44" aria-hidden="true">'
+        . $flame
+        . '<g class="candle-body" opacity="' . $body_opacity . '">'
+        . '<rect x="16" y="15" width="12" height="20" rx="4" fill="url(#candleGrad' . ($lit ? 'L' : '') . ')"/>'
+        . '<rect x="15" y="35" width="14" height="3" rx="1.5" fill="#8fa0bd" opacity=".7"/>'
+        . '</g>'
+        . '<defs><linearGradient id="candleGradL" x1="0" y1="0" x2="1" y2="0">'
+        . '<stop offset="0%" stop-color="#f7b84b"/><stop offset="100%" stop-color="#e9a83a"/>'
+        . '</linearGradient><linearGradient id="candleGrad" x1="0" y1="0" x2="1" y2="0">'
+        . '<stop offset="0%" stop-color="#aeb8cc"/><stop offset="100%" stop-color="#7e8ba6"/>'
+        . '</linearGradient></defs></svg>';
+}

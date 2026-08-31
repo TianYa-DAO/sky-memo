@@ -86,18 +86,26 @@ if ($action === 'todos') {
         $sum['cur'] += (int)$t['daily_currency'];
     }
     page_header('今日待办');
-    echo '<div class="container"><h2>今日待办（' . date('m月d日') . '）</h2>';
+    echo '<div class="container"><h2 class="page-title">今日待办</h2>';
+    echo '<p class="page-sub">' . date('m月d日 l') . ' — 点亮今天的蜡烛</p>';
     echo '<input type="hidden" name="csrf" value="' . csrf_token() . '">';
-    echo '<div class="summary">今天共 <b>' . $sum['fig'] . '</b> 图 / <b>' . $sum['task'] . '</b> 任务 / <b>' . $sum['cur'] . '</b> 代币，涉及 <b>' . count($todos) . '</b> 个单</div>';
-    if (!$todos) echo '<p class="empty">今天没有待办，好好休息～</p>';
+    echo '<div class="summary">'
+        . '<div class="sum-item"><span class="sum-num">' . $sum['fig'] . '</span><span class="sum-label">图</span></div>'
+        . '<div class="sum-item"><span class="sum-num">' . $sum['task'] . '</span><span class="sum-label">任务</span></div>'
+        . '<div class="sum-item"><span class="sum-num">' . $sum['cur'] . '</span><span class="sum-label">代币</span></div>'
+        . '<div class="sum-item"><span class="sum-num">' . count($todos) . '</span><span class="sum-label">在跑单</span></div>'
+        . '</div>';
+    if (!$todos) echo '<div class="card"><p class="empty"><span class="empty-icon">🕯️</span>今天没有待办<br>所有蜡烛都已点亮，好好休息～</p></div>';
     foreach ($todos as $t) {
         $done = $t['done_today'];
         echo '<div class="todo-card' . ($done ? ' done' : '') . '">';
-        echo '<label class="toggle"><input type="checkbox" data-oid="' . $t['id'] . '" ' . ($done ? 'checked' : '') . '> 今日完成</label>';
+        echo '<div class="candle-wrap">' . candle_svg($done, 40) . '</div>';
+        echo '<div class="t-body">';
+        echo '<label class="toggle"><input type="checkbox" data-oid="' . $t['id'] . '" ' . ($done ? 'checked' : '') . '><span class="check-label">今日完成</span></label>';
         echo '<div class="t-name">' . h($t['boss_name']) . ' · ' . h($t['order_no']) . '</div>';
-        echo '<div class="t-meta">' . h($t['type']) . '｜图×' . (int)$t['daily_figure'] . ' + 任务×' . (int)$t['daily_task'] . ' + 代币×' . (int)$t['daily_currency']
+        echo '<div class="t-meta">' . h($t['type']) . '｜图<b>×' . (int)$t['daily_figure'] . '</b> + 任务<b>×' . (int)$t['daily_task'] . '</b> + 代币<b>×' . (int)$t['daily_currency'] . '</b>'
             . '｜' . weekdays_label($t['weekdays']) . '｜至 ' . $t['end_date'] . '</div>';
-        echo '</div>';
+        echo '</div></div>';
     }
     echo '</div>';
     page_footer();
