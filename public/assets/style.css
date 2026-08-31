@@ -39,10 +39,11 @@ body {
   color: var(--ink);
   line-height: 1.65;
   min-height: 100vh;
-  /* 夜空 + 云隙月光 */
+  /* 夜空 + 云隙月光 + 烛光氛围 */
   background:
-    radial-gradient(1100px 520px at 88% -8%, rgba(183, 138, 224, .13), transparent 62%),
-    radial-gradient(900px 460px at -10% 110%, rgba(247, 184, 75, .10), transparent 60%),
+    radial-gradient(760px 420px at 82% -6%, rgba(183, 138, 224, .18), transparent 66%),
+    radial-gradient(520px 300px at 88% -10%, rgba(247, 184, 75, .12), transparent 70%),
+    radial-gradient(900px 460px at -12% 108%, rgba(247, 184, 75, .08), transparent 60%),
     linear-gradient(165deg, var(--night) 0%, var(--night-2) 55%, var(--night) 100%);
   background-attachment: fixed;
 }
@@ -110,24 +111,25 @@ h3 { font-size: 1.08rem; }
 .page-sub { color: var(--ink-2); font-size: .9rem; margin-bottom: 14px; }
 
 .summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 22px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
   background: linear-gradient(120deg, rgba(247, 184, 75, .14), rgba(247, 184, 75, .04));
   border: 1px solid rgba(247, 184, 75, .22);
   border-radius: 14px;
-  padding: 14px 18px;
+  padding: 14px 10px;
   margin: 12px 0 16px;
+  text-align: center;
 }
-.summary .sum-item { display: flex; flex-direction: column; }
+.summary .sum-item { display: flex; flex-direction: column; gap: 2px; }
 .summary .sum-num {
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
-.summary .sum-label { font-size: .78rem; color: var(--ink-2); letter-spacing: .06em; }
+.summary .sum-label { font-size: .76rem; color: var(--ink-2); letter-spacing: .06em; }
 
 .todo-card {
   display: flex;
@@ -137,25 +139,35 @@ h3 { font-size: 1.08rem; }
   border: 1px solid var(--panel-border);
   border-left: 3px solid var(--gold);
   border-radius: 14px;
-  padding: 14px 16px;
-  margin: 10px 0;
+  padding: 13px 15px;
+  margin: 8px 0;
   transition: opacity .3s, border-left-color .3s;
 }
-.todo-card .toggle { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; }
+.todo-card .t-body { flex: 1; min-width: 0; }
+.todo-card .toggle { display: flex; align-items: center; gap: 7px; margin-top: 8px; }
 .todo-card input[type=checkbox] {
   width: 20px; height: 20px; accent-color: var(--gold);
   cursor: pointer;
 }
-.todo-card .check-label { font-size: .8rem; color: var(--ink-2); }
+.todo-card .check-label { font-size: .78rem; color: var(--ink-2); }
 .todo-card.done {
-  opacity: .55;
+  opacity: .6;
   border-left-color: var(--ok);
 }
-.todo-card.done .t-name { text-decoration: line-through; text-decoration-color: rgba(238, 242, 248, .4); }
-.todo-card .t-body { flex: 1; min-width: 0; }
-.t-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 3px; }
-.t-meta { color: var(--ink-2); font-size: .83rem; }
-.t-meta b { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
+.todo-card.done .t-name { text-decoration: line-through; text-decoration-color: rgba(238, 242, 248, .35); }
+.t-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+.t-name { font-weight: 700; font-size: 1.05rem; }
+.t-no { color: var(--ink-3); font-size: .76rem; font-variant-numeric: tabular-nums; }
+.t-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.t-stat {
+  font-size: .83rem;
+  color: var(--ink-2);
+  background: rgba(247, 184, 75, .10);
+  border-radius: 8px;
+  padding: 3px 9px;
+}
+.t-stat b { color: var(--gold); font-size: .95rem; font-variant-numeric: tabular-nums; }
+.t-meta { color: var(--ink-3); font-size: .8rem; }
 
 .empty {
   color: var(--ink-2);

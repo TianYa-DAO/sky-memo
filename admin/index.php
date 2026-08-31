@@ -41,11 +41,11 @@ function page_header(string $title, bool $showNav = true): void {
     echo '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>' . h($title) . ' - 光遇备忘录</title>
-    <link rel="stylesheet" href="../public/assets/style.css"></head><body>';
+    <link rel="stylesheet" href="/assets/style.css"></head><body>';
     if ($showNav) echo $nav;
 }
 function page_footer(): void {
-    echo '<script src="../public/assets/app.js"></script></body></html>';
+    echo '<script src="/assets/app.js"></script></body></html>';
 }
 function weekdays_label(string $json): string {
     $map = ['1' => '周一', '2' => '周二', '3' => '周三', '4' => '周四', '5' => '周五', '6' => '周六', '7' => '周日'];
@@ -99,12 +99,12 @@ if ($action === 'todos') {
     foreach ($todos as $t) {
         $done = $t['done_today'];
         echo '<div class="todo-card' . ($done ? ' done' : '') . '">';
-        echo '<div class="candle-wrap">' . candle_svg($done, 40) . '</div>';
+        echo '<div class="candle-wrap">' . candle_svg($done, 44) . '</div>';
         echo '<div class="t-body">';
-        echo '<label class="toggle"><input type="checkbox" data-oid="' . $t['id'] . '" ' . ($done ? 'checked' : '') . '><span class="check-label">今日完成</span></label>';
-        echo '<div class="t-name">' . h($t['boss_name']) . ' · ' . h($t['order_no']) . '</div>';
-        echo '<div class="t-meta">' . h($t['type']) . '｜图<b>×' . (int)$t['daily_figure'] . '</b> + 任务<b>×' . (int)$t['daily_task'] . '</b> + 代币<b>×' . (int)$t['daily_currency'] . '</b>'
-            . '｜' . weekdays_label($t['weekdays']) . '｜至 ' . $t['end_date'] . '</div>';
+        echo '<div class="t-head"><span class="t-name">' . h($t['boss_name']) . '</span><span class="t-no">' . h($t['order_no']) . '</span></div>';
+        echo '<div class="t-stats"><span class="t-stat">图 <b>' . (int)$t['daily_figure'] . '</b></span><span class="t-stat">任务 <b>' . (int)$t['daily_task'] . '</b></span><span class="t-stat">代币 <b>' . (int)$t['daily_currency'] . '</b></span></div>';
+        echo '<div class="t-meta">' . h($t['type']) . ' · ' . weekdays_label($t['weekdays']) . ' · 至 ' . $t['end_date'] . '</div>';
+        echo '<label class="toggle"><input type="checkbox" data-oid="' . $t['id'] . '" ' . ($done ? 'checked' : '') . '><span class="check-label">' . ($done ? '已点亮' : '今日完成') . '</span></label>';
         echo '</div></div>';
     }
     echo '</div>';
