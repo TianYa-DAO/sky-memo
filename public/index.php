@@ -27,7 +27,7 @@ if (isset($_GET['token']) && $_GET['token'] !== '') {
     echo '<div class="view-candle">' . candle_svg($order['status'] === '已完成', 56) . '</div>';
     echo '<h1>' . h($statusText) . '</h1>';
     echo '<p class="view-no">订单号：' . h($order['order_no']) . '</p>';
-    echo '<div class="view-row"><span>类型</span><b>' . h($order['type']) . '</b></div>';
+    echo '<div class="view-row"><span>类型</span><b>' . h(types_label($order['types'] ?? '')) . '</b></div>';
     echo '<div class="view-row"><span>周期</span><b>' . $order['start_date'] . ' ~ ' . $order['end_date'] . '</b></div>';
     echo '<div class="view-row"><span>每日约定</span><b>图×' . (int)$order['daily_figure'] . ' + 任务×' . (int)$order['daily_task'] . ' + 代币×' . (int)$order['daily_currency'] . '</b></div>';
     echo '<div class="view-row"><span>累计完成</span><b>图' . (int)$sum['f'] . ' / 任务' . (int)$sum['t'] . ' / 代币' . (int)$sum['c'] . '</b></div>';
@@ -42,15 +42,17 @@ if (isset($_GET['token']) && $_GET['token'] !== '') {
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
-    $type = trim($_POST['type'] ?? '代跑');
     $info = trim($_POST['info'] ?? '');
     $contact = trim($_POST['contact'] ?? '');
     if ($info === '') { $msg = '请填写需求说明'; }
     else {
-        // 客户提交：创建"待接"订单；老板取第一个可用（无老板则用 0 占位，后台接单时再分配）
+        // 客户提交：创建"待接"订单；类型多选；默认工作日、7天周期；老板取第一个可用（无则0占位）
+        $typesPost = $_POST['types'] ?? [];
+        $typesList = is_array($typesPost) ? array_values(array_filter(array_map('trim', $typesPost))) : [];
+        if (empty($typesList)) $typesList = ['代跑'];
         $bossesList = boss_list($pdo);
         $newBossId = !empty($bossesList) ? (int)$bossesList[0]['id'] : 0;
-        $oid = order_create($pdo, $newBossId, $type, 0, 0, 0, '1,2,3,4,5', date('Y-m-d'), date('Y-m-d', strtotime('+7 day')), 0, '待接', '客户提交: ' . $info . ($contact !== '' ? ' 联系方式:' . $contact : ''));
+        $oid = order_create($pdo, $newBossId, $typesList, 0, 0, 0, '1,2,3,4,5', date('Y-m-d'), date('Y-m-d', strtotime('+7 day')), 0, '待接', '客户提交: ' . $info . ($contact !== '' ? ' 联系方式:' . $contact : ''));
         $order = order_get($pdo, $oid);
         $tok = order_token($pdo, $oid);
         $msg = '提交成功！订单号：' . $order['order_no'] . '<br>进度链接（请保存）：<a href="index.php?token=' . h($tok) . '">index.php?token=' . h($tok) . '</a>，可随时查看进度';
@@ -65,7 +67,22 @@ if ($msg) echo '<p class="' . (str_starts_with($msg, '提交成功') ? 'ok' : 'e
 echo '<h2>提交代跑需求</h2>';
 echo '<form method="post" class="form-grid">';
 echo '<input type="hidden" name="csrf" value="' . csrf_token() . '">';
-echo '<label>订单类型 <select name="type"><option>代跑</option><option>蜡烛</option><option>代币</option><option>包任务</option></select></label>';
+echo '<label class="full">选择服务类型（可多选）</label>';
+echo '<div class="types-picker full">';
+$typeGroups = [
+    '基础' => ['每日任务'],
+    '蜡烛' => ['10蜡烛', '15蜡烛', '20蜡烛'],
+    '服务' => ['挂饭', '包季', '包毕业', '献祭', '试炼'],
+    '地图' => ['晨岛', '云野', '雨林', '霞谷', '暮土', '禁阁'],
+];
+foreach ($typeGroups as $grp => $items) {
+    echo '<div class="type-group"><span class="type-group-label">' . h($grp) . '</span><div class="type-group-items">';
+    foreach ($items as $tt) {
+        echo '<label class="type-chip"><input type="checkbox" name="types[]" value="' . h($tt) . '"><span>' . h($tt) . '</span></label>';
+    }
+    echo '</div></div>';
+}
+echo '</div>';
 echo '<label class="full">需求说明 <textarea name="info" rows="3" required placeholder="例如：每天两个图+每日任务+代币，跑三周（周一到周五）"></textarea></label>';
 echo '<label class="full">联系方式（QQ/微信，选填） <input type="text" name="contact"></label>';
 echo '<button type="submit" class="btn full">提交订单</button>';

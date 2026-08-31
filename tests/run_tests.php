@@ -48,7 +48,7 @@ if ($dbOk && defined('APP_TEST')) {
     $pdo->exec("DELETE FROM bosses WHERE name='订单测试老板'");
     $pdo->exec("DELETE FROM orders WHERE order_no LIKE 'SKY-TEST-%'");
     $bid = boss_create($pdo, '订单测试老板', 'G', 'a', 'p', '');
-    $oid = order_create($pdo, $bid, '包任务', 2, 1, 1, '1,2,3,4,5', '2026-09-01', '2026-09-19', 300.00, '进行中', '测试周期单');
+    $oid = order_create($pdo, $bid, ['包任务', '10蜡烛'], 2, 1, 1, '1,2,3,4,5', '2026-09-01', '2026-09-19', 300.00, '进行中', '测试周期单');
     $o = order_get($pdo, $oid);
     check('order_create', $o !== false);
     check('order_no_prefix', str_starts_with($o['order_no'], 'SKY-TEST-'));
@@ -56,6 +56,15 @@ if ($dbOk && defined('APP_TEST')) {
     check('not_weekend', !active_on($o, '2026-09-06'));    // 周日不在 weekdays
     check('not_started', !active_on($o, '2026-08-30'));    // 周期未开始
     check('done_inactive', !active_on(array_merge($o, ['status' => '已完成']), '2026-09-07'));
+    check('multi_types', strpos($o['types'], '10蜡烛') !== false && strpos($o['types'], '包任务') !== false);
+
+    // 指定日期模式（repeat_weekly=0）
+    $oid2 = order_create($pdo, $bid, ['献祭'], 0, 0, 0, '', '2026-09-01', '2026-09-30', 50, '进行中', '指定日期测试', 0, ['2026-09-05', '2026-09-12']);
+    $o2 = order_get($pdo, $oid2);
+    check('sched_dates_on', active_on($o2, '2026-09-05'));
+    check('sched_dates_off', !active_on($o2, '2026-09-06'));
+    check('sched_weekday_ignored', !active_on($o2, '2026-09-11')); // 周五但不在指定列表
+    order_delete($pdo, $oid2);
     check('today_todos_find', count(today_todos($pdo, '2026-09-07')) === 1);
     check('today_todos_sun', count(today_todos($pdo, '2026-09-06')) === 0);
 

@@ -37,3 +37,21 @@ function boss_delete(PDO $pdo, int $id): bool {
     $st->execute([$id]);
     return $st->rowCount() > 0;
 }
+
+// 按昵称精确查找老板娘 id（无则 null）
+function boss_find_by_name(PDO $pdo, string $name): ?int {
+    $st = $pdo->prepare("SELECT id FROM bosses WHERE name=? LIMIT 1");
+    $st->execute([$name]);
+    $id = $st->fetchColumn();
+    return $id === false ? null : (int)$id;
+}
+
+// 解析老板输入：数字->原id；文本->同名存在则关联，否则自动创建（昵称）
+function resolve_boss_id(PDO $pdo, $input): int {
+    if (is_numeric($input) && (int)$input > 0) return (int)$input;
+    $name = trim((string)$input);
+    if ($name === '') return 0;
+    $exist = boss_find_by_name($pdo, $name);
+    if ($exist !== null) return $exist;
+    return boss_create($pdo, $name, '', null, null, '');
+}

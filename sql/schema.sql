@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS orders (
   order_no VARCHAR(32) NOT NULL UNIQUE,
   boss_id INT UNSIGNED NOT NULL,
   type VARCHAR(16) NOT NULL DEFAULT '代跑',
+  types TEXT,                          -- 多选任务类型 JSON 数组，如 ["每日任务","10蜡烛"]
+  repeat_weekly TINYINT NOT NULL DEFAULT 1, -- 1=每周重复(按weekdays) 0=指定日期(按selected_dates)
+  selected_dates TEXT,                 -- repeat_weekly=0 时：具体日期 JSON 数组
   daily_figure INT NOT NULL DEFAULT 0,
   daily_task INT NOT NULL DEFAULT 0,
   daily_currency INT NOT NULL DEFAULT 0,

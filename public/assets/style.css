@@ -223,6 +223,72 @@ select option { background: var(--night-2); color: var(--ink); }
 .form-grid .full { grid-column: 1 / -1; }
 .form-grid small { color: var(--ink-3); display: block; margin-top: 3px; }
 
+/* 任务类型多选 chips（分组） */
+.types-picker { display: flex; flex-direction: column; gap: 10px; margin: -4px 0 12px; }
+.type-group { display: flex; align-items: flex-start; gap: 10px; }
+.type-group-label {
+  flex: 0 0 34px;
+  padding-top: 7px;
+  font-size: .76rem;
+  color: var(--ink-3);
+  letter-spacing: .08em;
+}
+.type-group-items { display: flex; flex-wrap: wrap; gap: 7px; }
+.type-chip input, .wd-chip input { display: none; }
+.type-chip span, .wd-chip span {
+  display: inline-block;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(10, 18, 34, .5);
+  border: 1px solid var(--panel-border);
+  color: var(--ink-2);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all .18s;
+  user-select: none;
+}
+.type-chip input:checked + span {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+@media (max-width: 640px) {
+  .type-group { flex-direction: column; gap: 4px; }
+  .type-group-label { padding-top: 2px; }
+}
+/* 调度模式切换 */
+.sched-mode { display: flex; gap: 10px; margin-bottom: 12px; }
+.sched-opt { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: .88rem; cursor: pointer; }
+.sched-opt input { width: auto; margin: 0; accent-color: var(--gold); }
+.sched-panel { margin-bottom: 12px; }
+/* 周几 chips */
+.wd-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 5px; }
+.wd-picker .wd-chip span { display: block; text-align: center; padding: 8px 0; }
+/* 指定日期日历网格 */
+.date-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+.dg-hd { text-align: center; font-size: .72rem; color: var(--ink-3); padding: 3px 0; }
+.dg-empty { min-height: 34px; }
+.dg-cell {
+  min-height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 18, 34, .5);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .15s;
+  font-variant-numeric: tabular-nums;
+}
+.dg-cell:hover { border-color: var(--gold); color: var(--gold); }
+.dg-cell.on {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+}
+.date-tip { color: var(--ink-2); font-size: .8rem; margin-top: 8px; }
+.date-tip b { color: var(--gold); }
+
 /* ---------- 提示 ---------- */
 .err, .ok {
   border-radius: 10px;

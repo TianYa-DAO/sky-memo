@@ -42,6 +42,24 @@ function h($s): string {
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
+// 光遇代跑任务类型（多选）——按价目表
+function task_types(): array {
+    return ['每日任务', '10蜡烛', '15蜡烛', '20蜡烛', '挂饭', '包季', '包毕业', '献祭', '试炼', '晨岛', '云野', '雨林', '霞谷', '暮土', '禁阁'];
+}
+
+// 解析订单 types：JSON 字符串/数组 -> 数组
+function parse_types($types): array {
+    if (is_array($types)) return array_values(array_filter(array_map('trim', $types)));
+    if ($types === null || $types === '') return [];
+    $d = json_decode((string)$types, true);
+    return is_array($d) ? $d : preg_split('/[,，]/', (string)$types, -1, PREG_SPLIT_NO_EMPTY);
+}
+
+// 类型显示：数组/JSON -> '类型1、类型2'
+function types_label($types): string {
+    return implode('、', parse_types($types));
+}
+
 // 签名元素：蜡烛 SVG（$lit=true 点亮金色，否则灰色）
 function candle_svg(bool $lit = false, int $size = 44): string {
     $flame = $lit

@@ -5,16 +5,20 @@ require_once __DIR__ . '/bosses.php';
 // 注意：不 require records.php 以避免循环（records.php 依赖本文件的 order_get）
 // 需要在 records.php 的函数前先加载本文件；admin/public 已按顺序 require
 
-function order_create(PDO $pdo, int $bossId, string $type,
+function order_create(PDO $pdo, int $bossId, $types,
     int $dailyFigure, int $dailyTask, int $dailyCurrency,
     string $weekdays, string $start, string $end,
-    float $price, string $status, string $notes): int {
+    float $price, string $status, string $notes,
+    int $repeatWeekly = 1, $selectedDates = null): int {
     $orderNo = defined('APP_TEST') && APP_TEST
         ? 'SKY-TEST-' . substr((string)time(), -6) . '-' . random_int(10, 99)
         : generate_order_no($pdo);
-    $st = $pdo->prepare("INSERT INTO orders (order_no,boss_id,type,daily_figure,daily_task,daily_currency,weekdays,start_date,end_date,price,payment_status,status,notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
-    $st->execute([$orderNo,$bossId,$type,$dailyFigure,$dailyTask,$dailyCurrency,
+    $typesJson = json_encode(parse_types($types), JSON_UNESCAPED_UNICODE);
+    $selectedJson = json_encode(is_array($selectedDates) ? $selectedDates : (parse_types($selectedDates) ?: []), JSON_UNESCAPED_UNICODE);
+    $primary = types_label($types) ?: ($typesJson === '[]' ? '代跑' : substr(parse_types($types)[0] ?? '代跑', 0, 16));
+    $st = $pdo->prepare("INSERT INTO orders (order_no,boss_id,type,types,repeat_weekly,selected_dates,daily_figure,daily_task,daily_currency,weekdays,start_date,end_date,price,payment_status,status,notes)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $st->execute([$orderNo,$bossId,$primary,$typesJson,(int)$repeatWeekly,$selectedJson,$dailyFigure,$dailyTask,$dailyCurrency,
         '[' . $weekdays . ']', $start, $end, $price, '未付', $status, $notes]);
     $oid = (int)$pdo->lastInsertId();
     // 自动为订单生成客户查看 token
@@ -38,12 +42,17 @@ function order_list(PDO $pdo, ?string $status = null): array {
 }
 
 function order_update(PDO $pdo, int $id, array $data): bool {
-    $st = $pdo->prepare("UPDATE orders SET boss_id=:boss_id, type=:type, daily_figure=:df, daily_task=:dt, daily_currency=:dc,
-        weekdays=:wd, start_date=:sd, end_date=:ed, price=:price, payment_status=:ps, status=:st, notes=:notes WHERE id=:id");
+    $typesJson = json_encode(parse_types($data['types'] ?? []), JSON_UNESCAPED_UNICODE);
+    $selectedJson = json_encode(is_array($data['selected_dates'] ?? null) ? $data['selected_dates'] : (parse_types($data['selected_dates'] ?? null) ?: []), JSON_UNESCAPED_UNICODE);
+    $repeatWeekly = (int)($data['repeat_weekly'] ?? 1);
+    $st = $pdo->prepare("UPDATE orders SET boss_id=:boss_id, type=:type, types=:types, repeat_weekly=:rw, selected_dates=:sd,
+        daily_figure=:df, daily_task=:dt, daily_currency=:dc,
+        weekdays=:wd, start_date=:sd2, end_date=:ed, price=:price, payment_status=:ps, status=:st, notes=:notes WHERE id=:id");
     $st->execute([
-        ':boss_id' => $data['boss_id'], ':type' => $data['type'],
+        ':boss_id' => $data['boss_id'], ':type' => types_label($typesJson) ?: '代跑',
+        ':types' => $typesJson, ':rw' => $repeatWeekly, ':sd' => $selectedJson,
         ':df' => (int)$data['daily_figure'], ':dt' => (int)$data['daily_task'], ':dc' => (int)$data['daily_currency'],
-        ':wd' => '[' . $data['weekdays'] . ']', ':sd' => $data['start_date'], ':ed' => $data['end_date'],
+        ':wd' => '[' . ($data['weekdays'] ?? '1,2,3,4,5') . ']', ':sd2' => $data['start_date'], ':ed' => $data['end_date'],
         ':price' => (float)$data['price'], ':ps' => $data['payment_status'], ':st' => $data['status'],
         ':notes' => $data['notes'], ':id' => $id,
     ]);
@@ -66,12 +75,17 @@ function order_delete(PDO $pdo, int $id): bool {
     return $st->rowCount() > 0;
 }
 
-// 订单在指定日期是否激活（进行中 + 日期∈周期 + 周几匹配）
+// 订单在指定日期是否激活（进行中 + 周期内 + 按周几或指定日期）
 function active_on(array $order, string $date): bool {
     if (($order['status'] ?? '') !== '进行中') return false;
     if (!date_in_period($date, $order['start_date'], $order['end_date'])) return false;
-    $wd = json_decode($order['weekdays'], true) ?: [];
-    return weekday_matches($date, $wd);
+    // 每周重复：按 weekdays；否则：按 selected_dates
+    if ((int)($order['repeat_weekly'] ?? 1) === 1) {
+        $wd = json_decode($order['weekdays'] ?? '[]', true) ?: [];
+        return weekday_matches($date, $wd);
+    }
+    $dates = json_decode($order['selected_dates'] ?? '[]', true) ?: [];
+    return in_array($date, $dates, true);
 }
 
 // 今日待办（含老板名、今日是否已完成）
