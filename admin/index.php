@@ -60,7 +60,7 @@ if ($action === 'login' && !$loggedIn): ?>
 <div class="card login-card">
     <h1>光遇备忘录</h1>
     <?php if ($loginError): ?><p class="err"><?= h($loginError) ?></p><?php endif; ?>
-    <form method="post">
+    <form method="post" action="index.php?action=login">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>">
         <label>用户名 <input type="text" name="username" required autofocus></label>
         <label>密码 <input type="password" name="password" required></label>
@@ -146,7 +146,7 @@ if ($action === 'orders') {
         'price' => 0, 'payment_status' => '未付', 'status' => '进行中', 'notes' => ''];
     $wd = $editing ? (json_decode($editing['weekdays'], true) ?: []) : [1, 2, 3, 4, 5];
     echo '<div class="card"><h3>' . ($editing ? '编辑订单 #' . $editing['id'] : '新建订单') . '</h3>';
-    echo '<form method="post" class="form-grid">';
+    echo '<form method="post" class="form-grid" action="index.php?action=orders">';
     echo '<input type="hidden" name="csrf" value="' . csrf_token() . '">';
     echo '<input type="hidden" name="do" value="' . ($editing ? 'edit' : 'create') . '">';
     if ($editing) echo '<input type="hidden" name="id" value="' . $editing['id'] . '">';
@@ -186,13 +186,13 @@ if ($action === 'orders') {
             . '｜' . weekdays_label($o['weekdays']) . '｜' . $o['start_date'] . ' ~ ' . $o['end_date'] . '｜¥' . $o['price'] . '</div>';
         if ($o['notes']) echo '<div class="r-note">' . h($o['notes']) . '</div>';
         echo '<div class="r-actions">';
-        echo '<form method="post" class="inline"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="status"><input type="hidden" name="id" value="' . $o['id'] . '">';
+        echo '<form method="post" class="inline" action="index.php?action=orders"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="status"><input type="hidden" name="id" value="' . $o['id'] . '">';
         echo '<select name="status" onchange="this.form.submit()">';
         foreach (['待接', '进行中', '已完成', '已取消'] as $s) echo '<option' . ($o['status'] === $s ? ' selected' : '') . '>' . $s . '</option>';
         echo '</select><select name="payment_status" onchange="this.form.submit()">'
             . '<option' . ($o['payment_status'] === '未付' ? ' selected' : '') . '>未付</option><option' . ($o['payment_status'] === '已付' ? ' selected' : '') . '>已付</option></select></form>';
         echo '<a class="btn small" href="index.php?action=orders&edit=' . $o['id'] . '">编辑</a> ';
-        echo '<form method="post" class="inline" onsubmit="return confirm(\'删除该订单？\')"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="delete"><input type="hidden" name="id" value="' . $o['id'] . '"><button class="btn small danger">删除</button></form>';
+        echo '<form method="post" class="inline" action="index.php?action=orders" onsubmit="return confirm(\'删除该订单？\')"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="delete"><input type="hidden" name="id" value="' . $o['id'] . '"><button class="btn small danger">删除</button></form>';
         echo '</div></div>';
     }
     echo '</div></div>';
@@ -221,7 +221,7 @@ if ($action === 'bosses') {
     page_header('老板管理');
     echo '<div class="container"><h2>老板管理</h2>';
     echo '<div class="card"><h3>' . ($editing ? '编辑老板' : '新增老板') . '</h3>';
-    echo '<form method="post" class="form-grid">';
+    echo '<form method="post" class="form-grid" action="index.php?action=bosses">';
     echo '<input type="hidden" name="csrf" value="' . csrf_token() . '">';
     echo '<input type="hidden" name="do" value="' . ($editing ? 'edit' : 'create') . '">';
     if ($editing) echo '<input type="hidden" name="id" value="' . $editing['id'] . '">';
@@ -236,7 +236,7 @@ if ($action === 'bosses') {
         echo '<div class="row"><div class="r-title">' . h($b['name']) . ' <span class="badge">' . h($b['game_id']) . '</span></div>';
         echo '<div class="r-meta">账号已加密存储（' . (empty($b['account']) ? '未填' : '已存') . '）</div>';
         echo '<div class="r-actions"><a class="btn small" href="index.php?action=bosses&edit=' . $b['id'] . '">编辑</a> ';
-        echo '<form method="post" class="inline" onsubmit="return confirm(\'删除该老板？\')"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="delete"><input type="hidden" name="id" value="' . $b['id'] . '"><button class="btn small danger">删除</button></form></div></div>';
+        echo '<form method="post" class="inline" action="index.php?action=bosses" onsubmit="return confirm(\'删除该老板？\')"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="delete"><input type="hidden" name="id" value="' . $b['id'] . '"><button class="btn small danger">删除</button></form></div></div>';
     }
     echo '</div></div>';
     page_footer();

@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
       fd.append('csrf', document.querySelector('input[name=csrf]') ? document.querySelector('input[name=csrf]').value : '');
       fd.append('toggle', cb.dataset.oid);
       fd.append('checked', cb.checked ? '1' : '0');
-      fetch('index.php', { method: 'POST', body: fd })
+      fetch('./index.php', { method: 'POST', body: fd })
         .then(function (r) { if (r.ok) { cb.closest('.todo-card').classList.toggle('done', cb.checked);} })
         .catch(function () { cb.checked = !cb.checked; alert('操作失败，请重试'); });
     });
