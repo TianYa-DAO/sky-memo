@@ -128,7 +128,7 @@ if ($action === 'orders') {
         $typesRaw = $_POST['types'] ?? [];
         $typesList = is_array($typesRaw) ? $typesRaw : [$typesRaw];
         $typesList = array_values(array_filter(array_map('trim', $typesList)));
-        if (empty($typesList)) $typesList = ['代跑'];
+        if (empty($typesList)) $typesList = ['每日任务'];
         // 调度模式：repeat_weekly 1=周几 / 0=指定日期
         $repeatWeekly = isset($_POST['repeat_weekly']) && $_POST['repeat_weekly'] === '0' ? 0 : 1;
         $selectedDates = $repeatWeekly === 0 && !empty($_POST['selected_dates'])
@@ -193,7 +193,7 @@ if ($action === 'orders') {
     // 任务类型多选（按业务分组，显示描述+价格）
     echo '<label class="full">服务类型（可多选）</label>';
     $typeGroups = [
-        '基础' => ['代跑', '每日任务'],
+        '基础' => ['每日任务'],
         '蜡烛' => ['10蜡烛', '15蜡烛', '20蜡烛'],
         '服务' => ['挂饭', '包季', '包毕业', '献祭', '试炼'],
         '地图' => ['晨岛', '云野', '雨林', '霞谷', '暮土', '禁阁'],
@@ -212,14 +212,6 @@ if ($action === 'orders') {
     echo '</div>';
     // 服务说明（选中类型的描述合集）
     echo '<div class="full svc-desc-box" id="svc-desc-box"></div>';
-    // 服务周期（每天/每周/每月）
-    $currentPeriod = $editing ? ($editing['period'] ?? 'weekly') : 'weekly';
-    echo '<label class="full">服务周期</label>';
-    echo '<select name="period" id="period-select">';
-    foreach (['daily' => '每天', 'weekly' => '每周', 'monthly' => '每月'] as $p => $pl) {
-        echo '<option value="' . $p . '"' . ($currentPeriod === $p ? ' selected' : '') . '>' . $pl . '</option>';
-    }
-    echo '</select>';
     // 安排方式（每周固定/指定日期）
     echo '<label class="full">安排方式</label>';
     echo '<div class="full sched-mode">';
@@ -244,9 +236,9 @@ if ($action === 'orders') {
     echo '</div>';
     echo '<label>开始日期 <input type="date" name="start_date" id="start-date" value="' . $f['start_date'] . '" required></label>';
     echo '<label>结束日期 <input type="date" name="end_date" id="end-date" value="' . $f['end_date'] . '" required></label>';
-    // 价格（自动计算 + 手动覆盖）
-    echo '<label class="full">价格 <span id="auto-price-hint" class="chip-price" style="font-size:.85rem;margin-left:8px"></span></label>';
-    echo '<input type="number" step="0.01" name="price" id="price-input" value="' . (float)$f['price'] . '" placeholder="根据服务自动计算">';
+    // 价格（手动填写）
+    echo '<label class="full">价格（元）</label>';
+    echo '<input type="number" step="0.01" min="0" name="price" id="price-input" value="' . (float)$f['price'] . '" placeholder="手动填写价格">';
     echo '<label>付款 <select name="payment_status"><option' . ($f['payment_status'] === '未付' ? ' selected' : '') . '>未付</option><option' . ($f['payment_status'] === '已付' ? ' selected' : '') . '>已付</option></select></label>';
     echo '<label>状态 <select name="status">';
     foreach (['进行中', '待接', '已完成', '已取消'] as $s) echo '<option' . ($f['status'] === $s ? ' selected' : '') . '>' . $s . '</option>';
@@ -254,31 +246,17 @@ if ($action === 'orders') {
     echo '<label class="full">备注 <textarea name="notes" rows="2" placeholder="如：跑图路线、特殊要求等">' . h($f['notes']) . '</textarea></label>';
     echo '<button type="submit" class="btn full">' . ($editing ? '保存修改' : '创建订单') . '</button></form></div>';
 
-    // 自动定价 + 服务说明 JS
+    // 服务说明 JS（自动定价已取消，价格手动填写）
     echo '<script>';
     echo 'var catalog = {}; try { catalog = JSON.parse(document.getElementById("catalog-json").value); } catch (e) { console.error("catalog JSON 解析失败", e); }';
     echo 'function getSelectedTypes(){ return [...document.querySelectorAll("input[name=\\"types[]\\"]:checked")].map(c=>c.value); }';
-    echo 'function getPeriod(){ return document.getElementById("period-select").value; }';
-    echo 'function calcPrice(types, period){ let p=0; types.forEach(t=>{const s=catalog[t]; if(!s)return; if(s.recurring&&s[period])p+=s[period]; else if(s.once!=null)p+=s.once; else if(s.per_run!=null)p+=s.per_run; else if(s.per_map!=null)p+=s.per_map;}); return p; }';
-    echo 'var IS_EDIT = ' . ($editing ? 'true' : 'false') . ';';
-    echo 'function updatePrice(){';
-    echo '  var input=document.getElementById("price-input"), hint=document.getElementById("auto-price-hint");';
-    echo '  const types=getSelectedTypes(), period=getPeriod(), price=calcPrice(types,period);';
-    echo '  if(price>0){ input.value=price; hint.textContent="自动计算："+price+"元"; }';
-    echo '  else if(IS_EDIT){ hint.textContent="所选类型无法自动定价，已保留原价（无需可手动改）"; }';
-    echo '  else { input.value=0; hint.textContent=types.length>0?"该组合无法自动定价（如包毕业/旧类型），请手动填写":""; }';
-    echo '}';
     echo 'function updateDesc(){';
     echo '  const types=getSelectedTypes(), box=document.getElementById("svc-desc-box");';
     echo '  let html=""; types.forEach(t=>{ const s=catalog[t]; if(s) html+=\'<div class="svc-desc-item"><b>\'+t+\'</b> <span>\'+s.desc+"</span></div>"; });';
     echo '  box.innerHTML=html; box.style.display=html?"block":"none";';
     echo '}';
-    echo 'document.querySelectorAll("input[name=\\"types[]\\"]").forEach(c=>c.addEventListener("change",()=>{updatePrice();updateDesc();}));';
-    echo 'document.querySelectorAll("input[name=\\"repeat_weekly\\"]").forEach(r=>r.addEventListener("change",updatePrice));';
-    echo 'document.getElementById("period-select").addEventListener("change",updatePrice);';
-    echo 'document.getElementById("start-date").addEventListener("change",updatePrice);';
-    echo 'document.getElementById("end-date").addEventListener("change",updatePrice);';
-    echo 'updateDesc(); updatePrice();';
+    echo 'document.querySelectorAll("input[name=\\"types[]\\"]").forEach(c=>c.addEventListener("change",updateDesc));';
+    echo 'updateDesc();';
     echo '</script>';
 
     // 订单列表
