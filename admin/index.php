@@ -193,7 +193,7 @@ if ($action === 'orders') {
     // 任务类型多选（按业务分组，显示描述+价格）
     echo '<label class="full">服务类型（可多选）</label>';
     $typeGroups = [
-        '基础' => ['每日任务'],
+        '基础' => ['代跑', '每日任务'],
         '蜡烛' => ['10蜡烛', '15蜡烛', '20蜡烛'],
         '服务' => ['挂饭', '包季', '包毕业', '献祭', '试炼'],
         '地图' => ['晨岛', '云野', '雨林', '霞谷', '暮土', '禁阁'],
@@ -256,13 +256,17 @@ if ($action === 'orders') {
 
     // 自动定价 + 服务说明 JS
     echo '<script>';
-    echo 'const catalog = JSON.parse(document.getElementById("catalog-json").value);';
+    echo 'var catalog = {}; try { catalog = JSON.parse(document.getElementById("catalog-json").value); } catch (e) { console.error("catalog JSON 解析失败", e); }';
     echo 'function getSelectedTypes(){ return [...document.querySelectorAll("input[name=\\"types[]\\"]:checked")].map(c=>c.value); }';
     echo 'function getPeriod(){ return document.getElementById("period-select").value; }';
     echo 'function calcPrice(types, period){ let p=0; types.forEach(t=>{const s=catalog[t]; if(!s)return; if(s.recurring&&s[period])p+=s[period]; else if(s.once!=null)p+=s.once; else if(s.per_run!=null)p+=s.per_run; else if(s.per_map!=null)p+=s.per_map;}); return p; }';
+    echo 'var IS_EDIT = ' . ($editing ? 'true' : 'false') . ';';
     echo 'function updatePrice(){';
+    echo '  var input=document.getElementById("price-input"), hint=document.getElementById("auto-price-hint");';
     echo '  const types=getSelectedTypes(), period=getPeriod(), price=calcPrice(types,period);';
-    echo '  document.getElementById("price-input").value=price; document.getElementById("auto-price-hint").textContent=price>0?"自动计算："+price+"元":"";';
+    echo '  if(price>0){ input.value=price; hint.textContent="自动计算："+price+"元"; }';
+    echo '  else if(IS_EDIT){ hint.textContent="所选类型无法自动定价，已保留原价（无需可手动改）"; }';
+    echo '  else { input.value=0; hint.textContent=types.length>0?"该组合无法自动定价（如包毕业/旧类型），请手动填写":""; }';
     echo '}';
     echo 'function updateDesc(){';
     echo '  const types=getSelectedTypes(), box=document.getElementById("svc-desc-box");';
@@ -314,24 +318,33 @@ function parseDates() {
     var v = document.getElementById('selected-dates').value;
     return v ? v.split(',').filter(Boolean) : [];
 }
+// 本地时区日期格式化：避免 toISOString() 的 UTC 偏移导致(UTC+8)跨月日期差一天、末尾日期选不出去
+function fmtLocal(d) {
+    var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+    var dd = ('0' + d.getDate()).slice(-2);
+    return d.getFullYear() + '-' + mm + '-' + dd;
+}
+// 'YYYY-MM-DD' -> 本地零点 Date（不能用 new Date(s+'T00:00:00') 或 new Date(s)，避免时区/UTC 解析差异）
+function parseYmd(s) {
+    var p = s.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+}
 function buildDateGrid() {
     var grid = document.getElementById('date-grid');
     var start = document.getElementById('start-date').value;
     var end = document.getElementById('end-date').value;
     if (!start || !end) { grid.innerHTML = '<p class="date-tip">请先填开始/结束日期</p>'; return; }
     var selected = parseDates();
-    var cur = new Date(start + 'T00:00:00');
-    var last = new Date(end + 'T00:00:00');
+    var cur = parseYmd(start);
+    var last = parseYmd(end);
     var html = '';
     ['日','一','二','三','四','五','六'].forEach(function (h) { html += '<div class="dg-hd">' + h + '</div>'; });
     var firstDow = cur.getDay();
     for (var i = 0; i < firstDow; i++) html += '<div class="dg-empty"></div>';
     while (cur <= last) {
-        (function (d) {
-            var ys = d.toISOString().slice(0, 10);
-            var on = selected.indexOf(ys) >= 0;
-            html += '<div class="dg-cell' + (on ? ' on' : '') + '" data-d="' + ys + '">' + d.getDate() + '</div>';
-        })(new Date(cur.getTime()));
+        var ys = fmtLocal(cur);
+        var on = selected.indexOf(ys) >= 0;
+        html += '<div class="dg-cell' + (on ? ' on' : '') + '" data-d="' + ys + '">' + cur.getDate() + '</div>';
         cur.setDate(cur.getDate() + 1);
     }
     grid.innerHTML = html;

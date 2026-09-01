@@ -45,6 +45,8 @@ function h($s): string {
 // 光遇代跑服务目录（按价目表）——含价格、描述、周期
 function service_catalog(): array {
     return [
+        // ---- 兼容旧数据：旧版/前台无勾选时的默认"代跑" ----
+        '代跑'    => ['desc' => '综合代跑（默认服务，含每日任务）', 'daily' => 1, 'weekly' => 6, 'monthly' => 28, 'recurring' => true],
         // ---- 基础任务 ----
         '每日任务' => ['desc' => '每日4个任务，含亲密度', 'daily' => 1, 'weekly' => 6, 'monthly' => 28, 'recurring' => true],
         // ---- 蜡烛代跑（按蜡烛数量分档）----
