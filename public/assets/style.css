@@ -236,7 +236,9 @@ select option { background: var(--night-2); color: var(--ink); }
 .type-group-items { display: flex; flex-wrap: wrap; gap: 7px; }
 .type-chip input, .wd-chip input { display: none; }
 .type-chip span, .wd-chip span {
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
   padding: 6px 13px;
   border-radius: 999px;
   background: rgba(10, 18, 34, .5);
@@ -246,12 +248,27 @@ select option { background: var(--night-2); color: var(--ink); }
   cursor: pointer;
   transition: all .18s;
   user-select: none;
+  line-height: 1.25;
 }
+.chip-price { font-size: .65rem; color: var(--gold-soft); font-weight: 500; margin-top: 2px; }
 .type-chip input:checked + span {
   background: var(--gold-soft);
   border-color: var(--gold);
   color: var(--gold);
 }
+.type-chip input:checked + span .chip-price { color: rgba(35, 21, 0, .55); }
+/* 服务说明 */
+.svc-desc-box {
+  display: none;
+  background: rgba(10, 18, 34, .4);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.svc-desc-item { display: flex; gap: 8px; align-items: baseline; font-size: .83rem; color: var(--ink-2); margin: 3px 0; }
+.svc-desc-item b { color: var(--gold); font-weight: 600; white-space: nowrap; }
+.svc-desc-item span { color: var(--ink-3); }
 @media (max-width: 640px) {
   .type-group { flex-direction: column; gap: 4px; }
   .type-group-label { padding-top: 2px; }

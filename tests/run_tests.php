@@ -48,7 +48,7 @@ if ($dbOk && defined('APP_TEST')) {
     $pdo->exec("DELETE FROM bosses WHERE name='订单测试老板'");
     $pdo->exec("DELETE FROM orders WHERE order_no LIKE 'SKY-TEST-%'");
     $bid = boss_create($pdo, '订单测试老板', 'G', 'a', 'p', '');
-    $oid = order_create($pdo, $bid, ['包任务', '10蜡烛'], 2, 1, 1, '1,2,3,4,5', '2026-09-01', '2026-09-19', 300.00, '进行中', '测试周期单');
+    $oid = order_create($pdo, $bid, ['包任务', '10蜡烛'], 'daily', '1,2,3,4,5', '2026-09-01', '2026-09-19', 300.00, '进行中', '测试周期单');
     $o = order_get($pdo, $oid);
     check('order_create', $o !== false);
     check('order_no_prefix', str_starts_with($o['order_no'], 'SKY-TEST-'));
@@ -59,7 +59,7 @@ if ($dbOk && defined('APP_TEST')) {
     check('multi_types', strpos($o['types'], '10蜡烛') !== false && strpos($o['types'], '包任务') !== false);
 
     // 指定日期模式（repeat_weekly=0）
-    $oid2 = order_create($pdo, $bid, ['献祭'], 0, 0, 0, '', '2026-09-01', '2026-09-30', 50, '进行中', '指定日期测试', 0, ['2026-09-05', '2026-09-12']);
+    $oid2 = order_create($pdo, $bid, ['献祭'], 'once', '', '2026-09-01', '2026-09-30', 50, '进行中', '指定日期测试', 0, ['2026-09-05', '2026-09-12']);
     $o2 = order_get($pdo, $oid2);
     check('sched_dates_on', active_on($o2, '2026-09-05'));
     check('sched_dates_off', !active_on($o2, '2026-09-06'));
@@ -78,8 +78,8 @@ if ($dbOk && defined('APP_TEST')) {
     check('mark_done', record_today_done($pdo, $oid, '2026-09-08') === true);
     add_total_record($pdo, '2026-09-08', 5, 2, 3, '测试总账');
     $sum = day_summary($pdo, '2026-09-08');
-    check('day_sum_fig', (int)$sum['figure_count'] >= 2 + 5);  // 订单(2图)+总账(5图)
-    check('day_sum_cur', (int)$sum['currency_count'] === 4);  // 订单(1币)+总账(3币)
+    check('day_sum_fig', (int)$sum['figure_count'] >= 0 + 5);  // order now has 0 figures + total record has 5 figures
+    check('day_sum_cur', (int)$sum['currency_count'] === 0 + 3);  // order now has 0 + total has 3
     mark_order_done($pdo, $oid, '2026-09-08', false);
     check('mark_undo', record_today_done($pdo, $oid, '2026-09-08') === false);
     $cal = month_calendar($pdo, '2026-09');

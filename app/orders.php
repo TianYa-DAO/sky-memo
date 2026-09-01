@@ -5,10 +5,9 @@ require_once __DIR__ . '/bosses.php';
 // 注意：不 require records.php 以避免循环（records.php 依赖本文件的 order_get）
 // 需要在 records.php 的函数前先加载本文件；admin/public 已按顺序 require
 
-function order_create(PDO $pdo, int $bossId, $types,
-    int $dailyFigure, int $dailyTask, int $dailyCurrency,
-    string $weekdays, string $start, string $end,
-    float $price, string $status, string $notes,
+function order_create(PDO $pdo, int $bossId, $types, string $period = 'weekly',
+    string $weekdays = '1,2,3,4,5', string $start = '', string $end = '',
+    float $price = 0, string $status = '进行中', string $notes = '',
     int $repeatWeekly = 1, $selectedDates = null): int {
     $orderNo = defined('APP_TEST') && APP_TEST
         ? 'SKY-TEST-' . substr((string)time(), -6) . '-' . random_int(10, 99)
@@ -16,9 +15,9 @@ function order_create(PDO $pdo, int $bossId, $types,
     $typesJson = json_encode(parse_types($types), JSON_UNESCAPED_UNICODE);
     $selectedJson = json_encode(is_array($selectedDates) ? $selectedDates : (parse_types($selectedDates) ?: []), JSON_UNESCAPED_UNICODE);
     $primary = types_label($types) ?: ($typesJson === '[]' ? '代跑' : substr(parse_types($types)[0] ?? '代跑', 0, 16));
-    $st = $pdo->prepare("INSERT INTO orders (order_no,boss_id,type,types,repeat_weekly,selected_dates,daily_figure,daily_task,daily_currency,weekdays,start_date,end_date,price,payment_status,status,notes)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-    $st->execute([$orderNo,$bossId,$primary,$typesJson,(int)$repeatWeekly,$selectedJson,$dailyFigure,$dailyTask,$dailyCurrency,
+    $st = $pdo->prepare("INSERT INTO orders (order_no,boss_id,type,types,period,repeat_weekly,selected_dates,weekdays,start_date,end_date,price,payment_status,status,notes)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $st->execute([$orderNo,$bossId,$primary,$typesJson,$period,(int)$repeatWeekly,$selectedJson,
         '[' . $weekdays . ']', $start, $end, $price, '未付', $status, $notes]);
     $oid = (int)$pdo->lastInsertId();
     // 自动为订单生成客户查看 token
@@ -45,16 +44,15 @@ function order_update(PDO $pdo, int $id, array $data): bool {
     $typesJson = json_encode(parse_types($data['types'] ?? []), JSON_UNESCAPED_UNICODE);
     $selectedJson = json_encode(is_array($data['selected_dates'] ?? null) ? $data['selected_dates'] : (parse_types($data['selected_dates'] ?? null) ?: []), JSON_UNESCAPED_UNICODE);
     $repeatWeekly = (int)($data['repeat_weekly'] ?? 1);
-    $st = $pdo->prepare("UPDATE orders SET boss_id=:boss_id, type=:type, types=:types, repeat_weekly=:rw, selected_dates=:sd,
-        daily_figure=:df, daily_task=:dt, daily_currency=:dc,
+    $period = $data['period'] ?? 'weekly';
+    $st = $pdo->prepare("UPDATE orders SET boss_id=:boss_id, types=:types, period=:period, repeat_weekly=:rw, selected_dates=:sd,
         weekdays=:wd, start_date=:sd2, end_date=:ed, price=:price, payment_status=:ps, status=:st, notes=:notes WHERE id=:id");
     $st->execute([
-        ':boss_id' => $data['boss_id'], ':type' => types_label($typesJson) ?: '代跑',
-        ':types' => $typesJson, ':rw' => $repeatWeekly, ':sd' => $selectedJson,
-        ':df' => (int)$data['daily_figure'], ':dt' => (int)$data['daily_task'], ':dc' => (int)$data['daily_currency'],
+        ':boss_id' => $data['boss_id'], ':types' => $typesJson, ':period' => $period,
+        ':rw' => $repeatWeekly, ':sd' => $selectedJson,
         ':wd' => '[' . ($data['weekdays'] ?? '1,2,3,4,5') . ']', ':sd2' => $data['start_date'], ':ed' => $data['end_date'],
         ':price' => (float)$data['price'], ':ps' => $data['payment_status'], ':st' => $data['status'],
-        ':notes' => $data['notes'], ':id' => $id,
+        ':notes' => $data['notes'] ?? '', ':id' => $id,
     ]);
     return true;
 }

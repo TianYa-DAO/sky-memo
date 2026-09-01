@@ -94,6 +94,7 @@ if ($action === 'todos') {
         . '<div class="sum-item"><span class="sum-num">' . $sum['task'] . '</span><span class="sum-label">任务</span></div>'
         . '<div class="sum-item"><span class="sum-num">' . $sum['cur'] . '</span><span class="sum-label">代币</span></div>'
         . '<div class="sum-item"><span class="sum-num">' . count($todos) . '</span><span class="sum-label">在跑单</span></div>'
+        . '<div class="sum-item"><span class="sum-num">¥' . number_format(array_reduce($todos, fn($s,$t)=>$s+(float)($t['price']??0), 0), 1) . '</span><span class="sum-label">今日应收</span></div>'
         . '</div>';
     if (!$todos) echo '<div class="card"><p class="empty"><span class="empty-icon">🕯️</span>今天没有待办<br>所有蜡烛都已点亮，好好休息～</p></div>';
     foreach ($todos as $t) {
@@ -102,8 +103,11 @@ if ($action === 'todos') {
         echo '<div class="candle-wrap">' . candle_svg($done, 44) . '</div>';
         echo '<div class="t-body">';
         echo '<div class="t-head"><span class="t-name">' . h($t['boss_name']) . '</span><span class="t-no">' . h($t['order_no']) . '</span></div>';
-        echo '<div class="t-stats"><span class="t-stat">图 <b>' . (int)$t['daily_figure'] . '</b></span><span class="t-stat">任务 <b>' . (int)$t['daily_task'] . '</b></span><span class="t-stat">代币 <b>' . (int)$t['daily_currency'] . '</b></span></div>';
-        echo '<div class="t-meta">' . h(types_label($t['types'] ?? '')) . ' · ' . weekdays_label($t['weekdays']) . ' · 至 ' . $t['end_date'] . '</div>';
+        echo '<div class="t-stats">';
+        foreach (parse_types($t['types'] ?? []) as $tt) echo '<span class="t-stat">' . h($tt) . '</span>';
+        echo '<span class="t-stat">¥' . number_format((float)($t['price'] ?? 0), 1) . '</span>';
+        echo '</div>';
+        echo '<div class="t-meta">' . weekdays_label($t['weekdays']) . ' · 至 ' . $t['end_date'] . '</div>';
         echo '<label class="toggle"><input type="checkbox" data-oid="' . $t['id'] . '" ' . ($done ? 'checked' : '') . '><span class="check-label">' . ($done ? '已点亮' : '今日完成') . '</span></label>';
         echo '</div></div>';
     }
@@ -130,19 +134,19 @@ if ($action === 'orders') {
         $selectedDates = $repeatWeekly === 0 && !empty($_POST['selected_dates'])
             ? array_values(array_filter(array_map('trim', explode(',', $_POST['selected_dates']))))
             : [];
+        $period = $_POST['period'] ?? 'weekly';
         // 老板：支持数字id或自由输入昵称
         $bossInput = $_POST['boss_id'] ?? '';
         $bossId = resolve_boss_id($pdo, $bossInput);
         if (($_POST['do'] ?? '') === 'create') {
             order_create($pdo, $bossId, $typesList,
-                (int)$_POST['daily_figure'], (int)$_POST['daily_task'], (int)$_POST['daily_currency'],
-                $wdStr, $_POST['start_date'], $_POST['end_date'],
+                $period, $wdStr, $_POST['start_date'], $_POST['end_date'],
                 (float)$_POST['price'], $_POST['status'] ?? '进行中', $_POST['notes'] ?? '',
                 $repeatWeekly, $selectedDates);
         } elseif (($_POST['do'] ?? '') === 'edit' && isset($_POST['id'])) {
             order_update($pdo, (int)$_POST['id'], [
                 'boss_id' => $bossId, 'types' => $typesList,
-                'daily_figure' => (int)$_POST['daily_figure'], 'daily_task' => (int)$_POST['daily_task'], 'daily_currency' => (int)$_POST['daily_currency'],
+                'period' => $period,
                 'weekdays' => $wdStr, 'start_date' => $_POST['start_date'], 'end_date' => $_POST['end_date'],
                 'price' => (float)$_POST['price'], 'payment_status' => $_POST['payment_status'] ?? '未付',
                 'status' => $_POST['status'] ?? '进行中', 'notes' => $_POST['notes'] ?? '',
@@ -173,18 +177,21 @@ if ($action === 'orders') {
     $rw = $editing ? (int)($editing['repeat_weekly'] ?? 1) : 1;
     $selDates = $editing ? (json_decode($editing['selected_dates'] ?? '[]', true) ?: []) : [];
     $editBoss = $editing ? boss_get($pdo, (int)$editing['boss_id']) : null;
+    $catalog = service_catalog();
     echo '<div class="card"><h3>' . ($editing ? '编辑订单 #' . $editing['id'] : '新建订单') . '</h3>';
     echo '<form method="post" class="form-grid" action="index.php?action=orders" id="order-form">';
     echo '<input type="hidden" name="csrf" value="' . csrf_token() . '">';
     echo '<input type="hidden" name="do" value="' . ($editing ? 'edit' : 'create') . '">';
     if ($editing) echo '<input type="hidden" name="id" value="' . $editing['id'] . '">';
-    // 老板：默认展示已有关联名，允许自由输入
+    echo '<input type="hidden" name="price" id="price-hidden" value="' . (float)$f['price'] . '">';
+    echo '<input type="hidden" id="catalog-json" value="' . h(service_catalog_json()) . '">';
+    // 老板
     echo '<label>老板（可输入新名字）<input type="text" name="boss_id" list="boss-list" value="' . h($editBoss['name'] ?? '') . '" placeholder="选择已有老板或直接输入昵称" required></label>';
     echo '<datalist id="boss-list">';
     foreach ($bosses as $b) echo '<option value="' . h($b['name']) . '">';
     echo '</datalist>';
-    // 任务类型多选（按业务分组）
-    echo '<label class="full">任务类型（可多选）</label>';
+    // 任务类型多选（按业务分组，显示描述+价格）
+    echo '<label class="full">服务类型（可多选）</label>';
     $typeGroups = [
         '基础' => ['每日任务'],
         '蜡烛' => ['10蜡烛', '15蜡烛', '20蜡烛'],
@@ -195,22 +202,31 @@ if ($action === 'orders') {
     foreach ($typeGroups as $grp => $items) {
         echo '<div class="type-group"><span class="type-group-label">' . h($grp) . '</span><div class="type-group-items">';
         foreach ($items as $tt) {
+            $svc = $catalog[$tt] ?? [];
+            $priceHint = isset($svc['daily']) ? $svc['daily'] . 'r/天' : (isset($svc['per_run']) ? $svc['per_run'] . 'r/次' : (isset($svc['per_map']) ? $svc['per_map'] . 'r/图' : ''));
             $checked = in_array($tt, $selTypes, true) ? ' checked' : '';
-            echo '<label class="type-chip"><input type="checkbox" name="types[]" value="' . h($tt) . '"' . $checked . '><span>' . h($tt) . '</span></label>';
+            echo '<label class="type-chip" title="' . h($svc['desc'] ?? '') . '"><input type="checkbox" name="types[]" value="' . h($tt) . '"' . $checked . '><span>' . h($tt) . '<small class="chip-price">' . h($priceHint) . '</small></span></label>';
         }
         echo '</div></div>';
     }
     echo '</div>';
-    echo '<label>每日图数 <input type="number" name="daily_figure" value="' . (int)$f['daily_figure'] . '" min="0"></label>';
-    echo '<label>每日任务数 <input type="number" name="daily_task" value="' . (int)$f['daily_task'] . '" min="0"></label>';
-    echo '<label>每日代币数 <input type="number" name="daily_currency" value="' . (int)$f['daily_currency'] . '" min="0"></label>';
-    // 调度模式
+    // 服务说明（选中类型的描述合集）
+    echo '<div class="full svc-desc-box" id="svc-desc-box"></div>';
+    // 服务周期（每天/每周/每月）
+    $currentPeriod = $editing ? ($editing['period'] ?? 'weekly') : 'weekly';
+    echo '<label class="full">服务周期</label>';
+    echo '<select name="period" id="period-select">';
+    foreach (['daily' => '每天', 'weekly' => '每周', 'monthly' => '每月'] as $p => $pl) {
+        echo '<option value="' . $p . '"' . ($currentPeriod === $p ? ' selected' : '') . '>' . $pl . '</option>';
+    }
+    echo '</select>';
+    // 安排方式（每周固定/指定日期）
     echo '<label class="full">安排方式</label>';
     echo '<div class="full sched-mode">';
     echo '<label class="sched-opt"><input type="radio" name="repeat_weekly" value="1"' . ($rw === 1 ? ' checked' : '') . ' onchange="toggleSched(this.value)"><span>每周固定（选周几）</span></label>';
     echo '<label class="sched-opt"><input type="radio" name="repeat_weekly" value="0"' . ($rw === 0 ? ' checked' : '') . ' onchange="toggleSched(this.value)"><span>指定日期（日历点选）</span></label>';
     echo '</div>';
-    // 模式1：周几（每周重复）
+    // 周几
     echo '<div class="full sched-panel" id="panel-weekdays"' . ($rw === 1 ? '' : ' style="display:none"') . '>';
     echo '<label>每周哪几天</label><div class="wd-picker">';
     $map = [1 => '一', 2 => '二', 3 => '三', 4 => '四', 5 => '五', 6 => '六', 7 => '日'];
@@ -219,7 +235,7 @@ if ($action === 'orders') {
         echo '<label class="wd-chip"><input type="checkbox" name="weekdays[]" value="' . $k . '"' . $chk . '><span>周' . $v . '</span></label>';
     }
     echo '</div></div>';
-    // 模式2：指定日期（日历点选，选中日期写入隐藏域）
+    // 日历
     echo '<div class="full sched-panel" id="panel-dates"' . ($rw === 0 ? '' : ' style="display:none"') . '>';
     echo '<label>点击日历选择日期</label>';
     echo '<input type="hidden" name="selected_dates" id="selected-dates" value="' . h(implode(',', $selDates)) . '">';
@@ -228,13 +244,38 @@ if ($action === 'orders') {
     echo '</div>';
     echo '<label>开始日期 <input type="date" name="start_date" id="start-date" value="' . $f['start_date'] . '" required></label>';
     echo '<label>结束日期 <input type="date" name="end_date" id="end-date" value="' . $f['end_date'] . '" required></label>';
-    echo '<label>价格 <input type="number" step="0.01" name="price" value="' . $f['price'] . '"></label>';
+    // 价格（自动计算 + 手动覆盖）
+    echo '<label class="full">价格 <span id="auto-price-hint" class="chip-price" style="font-size:.85rem;margin-left:8px"></span></label>';
+    echo '<input type="number" step="0.01" name="price" id="price-input" value="' . (float)$f['price'] . '" placeholder="根据服务自动计算">';
     echo '<label>付款 <select name="payment_status"><option' . ($f['payment_status'] === '未付' ? ' selected' : '') . '>未付</option><option' . ($f['payment_status'] === '已付' ? ' selected' : '') . '>已付</option></select></label>';
     echo '<label>状态 <select name="status">';
-    foreach (['待接', '进行中', '已完成', '已取消'] as $s) echo '<option' . ($f['status'] === $s ? ' selected' : '') . '>' . $s . '</option>';
+    foreach (['进行中', '待接', '已完成', '已取消'] as $s) echo '<option' . ($f['status'] === $s ? ' selected' : '') . '>' . $s . '</option>';
     echo '</select></label>';
-    echo '<label class="full">备注 <textarea name="notes" rows="2">' . h($f['notes']) . '</textarea></label>';
+    echo '<label class="full">备注 <textarea name="notes" rows="2" placeholder="如：跑图路线、特殊要求等">' . h($f['notes']) . '</textarea></label>';
     echo '<button type="submit" class="btn full">' . ($editing ? '保存修改' : '创建订单') . '</button></form></div>';
+
+    // 自动定价 + 服务说明 JS
+    echo '<script>';
+    echo 'const catalog = JSON.parse(document.getElementById("catalog-json").value);';
+    echo 'function getSelectedTypes(){ return [...document.querySelectorAll("input[name=\\"types[]\\"]:checked")].map(c=>c.value); }';
+    echo 'function getPeriod(){ return document.getElementById("period-select").value; }';
+    echo 'function calcPrice(types, period){ let p=0; types.forEach(t=>{const s=catalog[t]; if(!s)return; if(s.recurring&&s[period])p+=s[period]; else if(s.once!=null)p+=s.once; else if(s.per_run!=null)p+=s.per_run; else if(s.per_map!=null)p+=s.per_map;}); return p; }';
+    echo 'function updatePrice(){';
+    echo '  const types=getSelectedTypes(), period=getPeriod(), price=calcPrice(types,period);';
+    echo '  document.getElementById("price-input").value=price; document.getElementById("auto-price-hint").textContent=price>0?"自动计算："+price+"元":"";';
+    echo '}';
+    echo 'function updateDesc(){';
+    echo '  const types=getSelectedTypes(), box=document.getElementById("svc-desc-box");';
+    echo '  let html=""; types.forEach(t=>{ const s=catalog[t]; if(s) html+=\'<div class="svc-desc-item"><b>\'+t+\'</b> <span>\'+s.desc+"</span></div>"; });';
+    echo '  box.innerHTML=html; box.style.display=html?"block":"none";';
+    echo '}';
+    echo 'document.querySelectorAll("input[name=\\"types[]\\"]").forEach(c=>c.addEventListener("change",()=>{updatePrice();updateDesc();}));';
+    echo 'document.querySelectorAll("input[name=\\"repeat_weekly\\"]").forEach(r=>r.addEventListener("change",updatePrice));';
+    echo 'document.getElementById("period-select").addEventListener("change",updatePrice);';
+    echo 'document.getElementById("start-date").addEventListener("change",updatePrice);';
+    echo 'document.getElementById("end-date").addEventListener("change",updatePrice);';
+    echo 'updateDesc(); updatePrice();';
+    echo '</script>';
 
     // 订单列表
     echo '<div class="list">';
@@ -243,11 +284,11 @@ if ($action === 'orders') {
         echo '<div class="row' . ($o['status'] === '已完成' ? ' done' : '') . '">';
         echo '<div class="r-title">' . h($o['order_no']) . ' · ' . h($boss['name'] ?? '?') . ' · ' . h(types_label($o['types'] ?? ''))
             . '<span class="badge ' . h($o['status']) . '">' . h($o['status']) . '</span>'
-            . '<span class="badge pay">' . h($o['payment_status']) . '</span></div>';
+            . '<span class="badge pay">¥' . (float)($o['price'] ?? 0) . '</span></div>';
         $sched = (int)($o['repeat_weekly'] ?? 1) === 1
             ? '每周：' . weekdays_label($o['weekdays'])
             : '指定：' . count(json_decode($o['selected_dates'] ?? '[]', true) ?: []) . '天';
-        echo '<div class="r-meta">' . $sched . '｜' . $o['start_date'] . ' ~ ' . $o['end_date'] . '｜每日 图×' . (int)$o['daily_figure'] . ' 任务×' . (int)$o['daily_task'] . ' 代币×' . (int)$o['daily_currency'] . '｜¥' . $o['price'] . '</div>';
+        echo '<div class="r-meta">' . $sched . ' · ' . $o['start_date'] . ' ~ ' . $o['end_date'] . ' · ¥' . (float)($o['price'] ?? 0) . '</div>';
         if ($o['notes']) echo '<div class="r-note">' . h($o['notes']) . '</div>';
         echo '<div class="r-actions">';
         echo '<form method="post" class="inline" action="index.php?action=orders"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="status"><input type="hidden" name="id" value="' . $o['id'] . '">';

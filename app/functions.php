@@ -42,9 +42,93 @@ function h($s): string {
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-// 光遇代跑任务类型（多选）——按价目表
+// 光遇代跑服务目录（按价目表）——含价格、描述、周期
+function service_catalog(): array {
+    return [
+        // ---- 基础任务 ----
+        '每日任务' => ['desc' => '每日4个任务，含亲密度', 'daily' => 1, 'weekly' => 6, 'monthly' => 28, 'recurring' => true],
+        // ---- 蜡烛代跑（按蜡烛数量分档）----
+        '10蜡烛' => ['desc' => '10根蜡烛/天，含每日+亲密度', 'daily' => 4, 'weekly' => 26, 'monthly' => 110, 'recurring' => true],
+        '15蜡烛' => ['desc' => '15根蜡烛/天，送4❤️，含每日+代币', 'daily' => 6, 'weekly' => 40, 'monthly' => 170, 'recurring' => true],
+        '20蜡烛' => ['desc' => '20根蜡烛/天，送5❤️，含每日+代币', 'daily' => 8, 'weekly' => 55, 'monthly' => 230, 'recurring' => true],
+        // ---- 挂机 ----
+        '挂饭'    => ['desc' => '挂机收烛，包月送代币+3❤️', 'daily' => 1, 'weekly' => 6.5, 'monthly' => 24, 'recurring' => true],
+        // ---- 季度服务 ----
+        '包季'    => ['desc' => '每日+亲密度+季节任务', 'once' => 100, 'recurring' => false],
+        '包毕业'  => ['desc' => '赛季毕业（不含卡）', 'once' => null, 'recurring' => false],
+        // ---- 一次性 ----
+        '献祭'    => ['desc' => '暴风眼献祭，无翼不接', 'per_run' => 5, 'recurring' => false],
+        '试炼'    => ['desc' => '各试炼地图，2r/图', 'per_map' => 2, 'recurring' => false],
+        // ---- 地图代跑 ----
+        '晨岛' => ['desc' => '晨岛全图跑烛', 'per_run' => 1.5, 'recurring' => false],
+        '云野' => ['desc' => '云野全图跑烛', 'per_run' => 2, 'recurring' => false],
+        '雨林' => ['desc' => '雨林全图跑烛', 'per_run' => 2, 'recurring' => false],
+        '霞谷' => ['desc' => '霞谷全图跑烛', 'per_run' => 3, 'recurring' => false],
+        '暮土' => ['desc' => '暮土全图跑烛', 'per_run' => 3, 'recurring' => false],
+        '禁阁' => ['desc' => '禁阁全图跑烛', 'per_run' => 2, 'recurring' => false],
+    ];
+}
+
+// 光遇代跑任务类型（多选）——按价目表（保留兼容）
 function task_types(): array {
-    return ['每日任务', '10蜡烛', '15蜡烛', '20蜡烛', '挂饭', '包季', '包毕业', '献祭', '试炼', '晨岛', '云野', '雨林', '霞谷', '暮土', '禁阁'];
+    return array_keys(service_catalog());
+}
+
+// 获取服务描述
+function service_desc(string $type): string {
+    $cat = service_catalog();
+    return $cat[$type]['desc'] ?? '';
+}
+
+// 判断服务是否为循环服务（日/周/月）
+function service_recurring(string $type): bool {
+    $cat = service_catalog();
+    return $cat[$type]['recurring'] ?? false;
+}
+
+// 根据服务类型 + 周期 + 服务数量自动计算价格
+// $period: 'daily'/'weekly'/'monthly'/'once'（一次性）
+// $count: 服务次数（地图数/献祭次数等一次性服务用，默认1）
+function calculate_price(array $types, string $period = 'daily', int $count = 1): float {
+    $catalog = service_catalog();
+    $total = 0;
+    foreach ($types as $t) {
+        $svc = $catalog[$t] ?? null;
+        if (!$svc) continue;
+        if ($svc['recurring']) {
+            $total += $svc[$period] ?? 0;
+        } elseif ($period === 'once' && isset($svc['once'])) {
+            $total += $svc['once'] * $count;
+        } elseif (isset($svc['per_run'])) {
+            $total += $svc['per_run'] * $count;
+        } elseif (isset($svc['per_map'])) {
+            $total += $svc['per_map'] * $count;
+        }
+    }
+    return $total;
+}
+
+// 周期显示：'daily' -> '每天', 'weekly' => '每周', etc
+function period_label(string $period): string {
+    return ['daily' => '每天', 'weekly' => '每周', 'monthly' => '每月', 'once' => '一次'][ $period ] ?? $period;
+}
+
+// 输出服务目录 JSON（供前端 JS 自动定价）
+function service_catalog_json(): string {
+    $out = [];
+    foreach (service_catalog() as $name => $svc) {
+        $out[$name] = [
+            'desc' => $svc['desc'] ?? '',
+            'recurring' => $svc['recurring'] ?? false,
+            'daily' => $svc['daily'] ?? null,
+            'weekly' => $svc['weekly'] ?? null,
+            'monthly' => $svc['monthly'] ?? null,
+            'once' => $svc['once'] ?? null,
+            'per_run' => $svc['per_run'] ?? null,
+            'per_map' => $svc['per_map'] ?? null,
+        ];
+    }
+    return json_encode($out, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 }
 
 // 解析订单 types：JSON 字符串/数组 -> 数组
