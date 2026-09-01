@@ -8,7 +8,7 @@ require_once __DIR__ . '/bosses.php';
 function order_create(PDO $pdo, int $bossId, $types, string $period = 'weekly',
     string $weekdays = '1,2,3,4,5', string $start = '', string $end = '',
     float $price = 0, string $status = '进行中', string $notes = '',
-    int $repeatWeekly = 1, $selectedDates = null): int {
+    int $repeatWeekly = 1, $selectedDates = null, string $paymentStatus = '未付'): int {
     $orderNo = defined('APP_TEST') && APP_TEST
         ? 'SKY-TEST-' . substr((string)time(), -6) . '-' . random_int(10, 99)
         : generate_order_no($pdo);
@@ -18,7 +18,7 @@ function order_create(PDO $pdo, int $bossId, $types, string $period = 'weekly',
     $st = $pdo->prepare("INSERT INTO orders (order_no,boss_id,type,types,period,repeat_weekly,selected_dates,weekdays,start_date,end_date,price,payment_status,status,notes)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $st->execute([$orderNo,$bossId,$primary,$typesJson,$period,(int)$repeatWeekly,$selectedJson,
-        '[' . $weekdays . ']', $start, $end, $price, '未付', $status, $notes]);
+        '[' . $weekdays . ']', $start, $end, $price, $paymentStatus, $status, $notes]);
     $oid = (int)$pdo->lastInsertId();
     // 自动为订单生成客户查看 token
     ensure_client_token($pdo, $oid);

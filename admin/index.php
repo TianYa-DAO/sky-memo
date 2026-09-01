@@ -142,7 +142,7 @@ if ($action === 'orders') {
             order_create($pdo, $bossId, $typesList,
                 $period, $wdStr, $_POST['start_date'], $_POST['end_date'],
                 (float)$_POST['price'], $_POST['status'] ?? '进行中', $_POST['notes'] ?? '',
-                $repeatWeekly, $selectedDates);
+                $repeatWeekly, $selectedDates, $_POST['payment_status'] ?? '未付');
         } elseif (($_POST['do'] ?? '') === 'edit' && isset($_POST['id'])) {
             order_update($pdo, (int)$_POST['id'], [
                 'boss_id' => $bossId, 'types' => $typesList,
@@ -239,7 +239,9 @@ if ($action === 'orders') {
     // 价格（手动填写）
     echo '<label class="full">价格（元）</label>';
     echo '<input type="number" step="0.01" min="0" name="price" id="price-input" value="' . (float)$f['price'] . '" placeholder="手动填写价格">';
-    echo '<label>付款 <select name="payment_status"><option' . ($f['payment_status'] === '未付' ? ' selected' : '') . '>未付</option><option' . ($f['payment_status'] === '已付' ? ' selected' : '') . '>已付</option></select></label>';
+    echo '<label>付款 <select name="payment_status">';
+    foreach (['未付', '定金', '已付'] as $ps) echo '<option' . ($f['payment_status'] === $ps ? ' selected' : '') . '>' . $ps . '</option>';
+    echo '</select></label>';
     echo '<label>状态 <select name="status">';
     foreach (['进行中', '待接', '已完成', '已取消'] as $s) echo '<option' . ($f['status'] === $s ? ' selected' : '') . '>' . $s . '</option>';
     echo '</select></label>';
@@ -276,8 +278,9 @@ if ($action === 'orders') {
         echo '<form method="post" class="inline" action="index.php?action=orders"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="status"><input type="hidden" name="id" value="' . $o['id'] . '">';
         echo '<select name="status" onchange="this.form.submit()">';
         foreach (['待接', '进行中', '已完成', '已取消'] as $s) echo '<option' . ($o['status'] === $s ? ' selected' : '') . '>' . $s . '</option>';
-        echo '</select><select name="payment_status" onchange="this.form.submit()">'
-            . '<option' . ($o['payment_status'] === '未付' ? ' selected' : '') . '>未付</option><option' . ($o['payment_status'] === '已付' ? ' selected' : '') . '>已付</option></select></form>';
+        echo '</select><select name="payment_status" onchange="this.form.submit()">';
+        foreach (['未付', '定金', '已付'] as $ps) echo '<option' . ($o['payment_status'] === $ps ? ' selected' : '') . '>' . $ps . '</option>';
+        echo '</select></form>';
         echo '<a class="btn small" href="index.php?action=orders&edit=' . $o['id'] . '">编辑</a> ';
         echo '<form method="post" class="inline" action="index.php?action=orders" onsubmit="return confirm(\'删除该订单？\')"><input type="hidden" name="csrf" value="' . csrf_token() . '"><input type="hidden" name="do" value="delete"><input type="hidden" name="id" value="' . $o['id'] . '"><button class="btn small danger">删除</button></form>';
         echo '</div></div>';
