@@ -57,6 +57,7 @@ function service_catalog(): array {
         '20蜡烛' => ['desc' => '20根蜡烛/天，送5❤️，含每日+代币', 'daily' => 8, 'weekly' => 55, 'monthly' => 230, 'recurring' => true],
         // ---- 挂机 ----
         '挂饭'    => ['desc' => '挂机收烛，包月送代币+3❤️', 'daily' => 1, 'weekly' => 6.5, 'monthly' => 24, 'recurring' => true],
+        '挂先祖'  => ['desc' => '挂机收先祖烛火', 'recurring' => false],
         // ---- 季度服务 ----
         '包季'    => ['desc' => '每日+亲密度+季节任务', 'once' => 100, 'recurring' => false],
         '包毕业'  => ['desc' => '赛季毕业（不含卡）', 'once' => null, 'recurring' => false],
