@@ -36,15 +36,20 @@ function day_summary(PDO $pdo, string $date): array {
     return $st->fetch();
 }
 
-// 月历数据：某月每天的汇总 + 活跃订单数
+// 月历数据：某月每天的汇总 + 活跃订单数（"任务"=含"每日任务"(及旧版"代跑")类型的活跃订单数）
 function month_calendar(PDO $pdo, string $ym): array {
     $start = $ym . '-01';
     $end = date('Y-m-t', strtotime($start));
     $days = [];
     $d = $start;
     while ($d <= $end) {
+        $todos = today_todos($pdo, $d);
         $days[$d] = day_summary($pdo, $d);
-        $days[$d]['active_orders'] = count(today_todos($pdo, $d));
+        $days[$d]['active_orders'] = count($todos);
+        $days[$d]['task_count'] = count(array_filter($todos, function ($t) {
+            $types = parse_types($t['types'] ?? '');
+            return in_array('每日任务', $types, true) || in_array('代跑', $types, true);
+        }));
         $d = date('Y-m-d', strtotime($d . ' +1 day'));
     }
     return $days;

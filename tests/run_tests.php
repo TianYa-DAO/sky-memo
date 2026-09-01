@@ -48,6 +48,9 @@ if ($dbOk && defined('APP_TEST')) {
     $pdo->exec("DELETE FROM bosses WHERE name='订单测试老板'");
     $pdo->exec("DELETE FROM orders WHERE order_no LIKE 'SKY-TEST-%'");
     $bid = boss_create($pdo, '订单测试老板', 'G', 'a', 'p', '');
+    // 生产环境可能有真实订单，待办断言用相对增量（基线+1/基线不变）
+    $baseMon = count(today_todos($pdo, '2026-09-07'));
+    $baseSun = count(today_todos($pdo, '2026-09-06'));
     $oid = order_create($pdo, $bid, ['包任务', '10蜡烛'], 'daily', '1,2,3,4,5', '2026-09-01', '2026-09-19', 300.00, '进行中', '测试周期单');
     $o = order_get($pdo, $oid);
     check('order_create', $o !== false);
@@ -65,8 +68,8 @@ if ($dbOk && defined('APP_TEST')) {
     check('sched_dates_off', !active_on($o2, '2026-09-06'));
     check('sched_weekday_ignored', !active_on($o2, '2026-09-11')); // 周五但不在指定列表
     order_delete($pdo, $oid2);
-    check('today_todos_find', count(today_todos($pdo, '2026-09-07')) === 1);
-    check('today_todos_sun', count(today_todos($pdo, '2026-09-06')) === 0);
+    check('today_todos_find', count(today_todos($pdo, '2026-09-07')) === $baseMon + 1);
+    check('today_todos_sun', count(today_todos($pdo, '2026-09-06')) === $baseSun);
 
     $tok = ensure_client_token($pdo, $oid);
     check('token_32', strlen($tok) === 32);
@@ -101,10 +104,12 @@ if ($dbOk && defined('APP_TEST')) {
     check('admin_login_bad', admin_login($pdo, 'testadmin', 'wrong') === null);
     $pdo->exec("DELETE FROM users WHERE username='testadmin'");
 
-    // ---- cleanup ----
+    // ---- cleanup（只清理测试产生的数据，绝不碰生产数据）----
+    $pdo->exec("DELETE FROM daily_records WHERE order_id IN ($oid,$oid2)");
+    $pdo->exec("DELETE FROM client_views WHERE order_id IN ($oid,$oid2)");
     order_delete($pdo, $oid);
     $pdo->exec("DELETE FROM bosses WHERE id=$bid");
-    $pdo->exec("DELETE FROM daily_records WHERE note LIKE '测试%' OR note='改' OR note=''");
+    $pdo->exec("DELETE FROM daily_records WHERE note LIKE '测试%' OR note='改'");
 }
 
 // 汇总

@@ -108,6 +108,7 @@ if ($action === 'todos') {
         echo '<span class="t-stat">¥' . number_format((float)($t['price'] ?? 0), 1) . '</span>';
         echo '</div>';
         echo '<div class="t-meta">' . weekdays_label($t['weekdays']) . ' · 至 ' . $t['end_date'] . '</div>';
+        if (!empty($t['notes'])) echo '<div class="t-note">📝 ' . h($t['notes']) . '</div>';
         echo '<label class="toggle"><input type="checkbox" data-oid="' . $t['id'] . '" ' . ($done ? 'checked' : '') . '><span class="check-label">' . ($done ? '已点亮' : '今日完成') . '</span></label>';
         echo '</div></div>';
     }
