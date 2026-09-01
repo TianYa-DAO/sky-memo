@@ -49,6 +49,8 @@ function service_catalog(): array {
         '代跑'    => ['desc' => '综合代跑（默认服务，含每日任务）', 'daily' => 1, 'weekly' => 6, 'monthly' => 28, 'recurring' => true],
         // ---- 基础任务 ----
         '每日任务' => ['desc' => '每日4个任务，含亲密度', 'daily' => 1, 'weekly' => 6, 'monthly' => 28, 'recurring' => true],
+        // ---- 代币 ----
+        '代币'    => ['desc' => '活动代币代收', 'recurring' => false],
         // ---- 蜡烛代跑（按蜡烛数量分档）----
         '10蜡烛' => ['desc' => '10根蜡烛/天，含每日+亲密度', 'daily' => 4, 'weekly' => 26, 'monthly' => 110, 'recurring' => true],
         '15蜡烛' => ['desc' => '15根蜡烛/天，送4❤️，含每日+代币', 'daily' => 6, 'weekly' => 40, 'monthly' => 170, 'recurring' => true],
